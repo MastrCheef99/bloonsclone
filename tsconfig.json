@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "lib": [
+        "ESNext",
+        "dom"
+    ],
+    "outDir": "compiled",
+    "removeComments": true,
+    "target": "esnext",
+    "preserveConstEnums": true,
+    "sourceMap": true,
+    "baseUrl": "./",
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "paths": {},
+    "alwaysStrict": true,
+    "allowUnreachableCode": false,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+  },
+  "files": [
+    "js/balloon.ts",
+    "js/main.ts",
+    "js/track.ts"
+  ]
+}
