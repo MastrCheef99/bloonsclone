@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tower Defense Point Drawer</title>
+<style>
+  body {
+    background: #1e1e1e;
+    color: #eee;
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0;
+  }
+  canvas {
+    border: 2px solid #555;
+    cursor: crosshair;
+    margin-top: 10px;
+  }
+  #controls {
+    margin: 10px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  button, select, input[type=number] {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    background: #444;
+    color: white;
+    cursor: pointer;
+  }
+  button:hover, select:hover, input[type=number]:hover {
+    background: #666;
+  }
+  textarea {
+    width: 90vw;
+    height: 120px;
+    margin-top: 10px;
+    background: #111;
+    color: #0f0;
+    border: 1px solid #444;
+    border-radius: 6px;
+    font-family: monospace;
+    padding: 8px;
+  }
+</style>
+</head>
+<body>
+
+<h2>Map Point Drawer</h2>
+<input type="file" id="imageLoader" accept="image/*">
+<div id="controls">
+  <label>Tool:
+    <select id="tool">
+      <option value="brush">Brush</option>
+      <option value="box">Box</option>
+    </select>
+  </label>
+  <label>Brush size:
+    <input type="number" id="brushSize" value="4" min="1" max="100">
+  </label>
+  <button id="clear">Clear</button>
+  <button id="copy">Copy JSON</button>
+</div>
+<canvas id="canvas" width="800" height="600"></canvas>
+<textarea id="output" readonly></textarea>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const output = document.getElementById("output");
+const clearBtn = document.getElementById("clear");
+const copyBtn = document.getElementById("copy");
+const imageLoader = document.getElementById("imageLoader");
+const toolSelect = document.getElementById("tool");
+const brushSizeInput = document.getElementById("brushSize");
+
+let drawing = false;
+let points = [];
+let image = null;
+let startX = 0, startY = 0;
+
+// Convert mouse to canvas coordinates
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: Math.round(e.clientX - rect.left),
+    y: Math.round(e.clientY - rect.top)
+  };
+}
+
+canvas.addEventListener("mousedown", (e) => {
+  drawing = true;
+  const pos = getPos(e);
+  startX = pos.x;
+  startY = pos.y;
+  if (toolSelect.value === "brush") drawBrush(pos.x, pos.y);
+});
+
+canvas.addEventListener("mousemove", (e) => {
+  if (!drawing) return;
+  const pos = getPos(e);
+  if (toolSelect.value === "brush") {
+    drawBrush(pos.x, pos.y);
+  } else if (toolSelect.value === "box") {
+    redraw();
+    const width = pos.x - startX;
+    const height = pos.y - startY;
+    ctx.strokeStyle = "rgba(255,0,0,0.8)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(startX, startY, width, height);
+  }
+});
+
+canvas.addEventListener("mouseup", (e) => {
+  if (!drawing) return;
+  drawing = false;
+  const pos = getPos(e);
+  if (toolSelect.value === "box") {
+    drawBox(startX, startY, pos.x, pos.y);
+  }
+});
+
+canvas.addEventListener("mouseleave", () => (drawing = false));
+
+function drawBrush(x, y) {
+  const size = parseInt(brushSizeInput.value);
+  ctx.fillStyle = "red";
+  ctx.beginPath();
+  ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+  ctx.fill();
+  for (let i = -size/2; i <= size/2; i++) {
+    for (let j = -size/2; j <= size/2; j++) {
+      if (i*i + j*j <= (size/2)*(size/2)) {
+        const px = Math.round(x + i);
+        const py = Math.round(y + j);
+        points.push({ x: px, y: py });
+      }
+    }
+  }
+  updateOutput();
+}
+
+function drawBox(x1, y1, x2, y2) {
+  const left = Math.min(x1, x2);
+  const right = Math.max(x1, x2);
+  const top = Math.min(y1, y2);
+  const bottom = Math.max(y1, y2);
+  ctx.fillStyle = "rgba(255,0,0,0.3)";
+  ctx.fillRect(left, top, right - left, bottom - top);
+  for (let x = left; x <= right; x++) {
+    for (let y = top; y <= bottom; y++) {
+      points.push({ x, y });
+    }
+  }
+  updateOutput();
+}
+
+function redraw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (image) ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "red";
+  for (const p of points) {
+    ctx.fillRect(p.x, p.y, 1, 1);
+  }
+}
+
+function updateOutput() {
+  output.value = JSON.stringify(points, null, 2);
+}
+
+clearBtn.addEventListener("click", () => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (image) ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  points = [];
+  updateOutput();
+});
+
+copyBtn.addEventListener("click", () => {
+  navigator.clipboard.writeText(output.value);
+  copyBtn.textContent = "Copied!";
+  setTimeout(() => (copyBtn.textContent = "Copy JSON"), 1000);
+});
+
+imageLoader.addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const img = new Image();
+  img.onload = () => {
+    image = img;
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+  };
+  img.src = URL.createObjectURL(file);
+});
+</script>
+
+</body>
+</html>

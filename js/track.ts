@@ -80,7 +80,7 @@ class BezierCurve {
   }
   
   render(ctx: CanvasRenderingContext2D){
-    ctx.strokeStyle = "black";
+    ctx.strokeStyle = "red";
     ctx.beginPath();
     ctx.moveTo(this.p0.x, this.p0.y);
     ctx.bezierCurveTo(this.p1.x, this.p1.y, this.p2.x, this.p2.y, this.p3.x, this.p3.y);
@@ -91,9 +91,44 @@ class BezierCurve {
 class Track {
     bloonLine: Array<BezierCurve>;
     bloonArray: Array<Bloon>;
+    unplaceBoxes: Array<Point>;
+    bg: HTMLImageElement;
+    tunnelSegments: Array<number>;
 
-    constructor(bloonLine: Array<BezierCurve>, bloonArray: Array<Bloon>){
+    constructor(bloonLine: Array<BezierCurve>, bloonArray: Array<Bloon>, background: HTMLImageElement, tunnelSegments: Array<number>, unplaceBoxes: Array<Point> = []){
         this.bloonLine = bloonLine;
         this.bloonArray = bloonArray;
+        this.unplaceBoxes = unplaceBoxes;
+        this.tunnelSegments = tunnelSegments;
+        this.bg = background;
+    }
+
+    moveBloons(delta: number) {
+      for (let index = 0; index < this.bloonArray.length; index++) {
+        const bloon = this.bloonArray[index];
+        if (bloon.move(this.bloonLine[bloon.line], delta)){
+          if (bloon.line >= this.bloonLine.length){
+            this.bloonArray.splice(index,1);
+            index--;
+            continue;
+          }
+        }
+      }
+    }
+
+    drawBloons(ctx: CanvasRenderingContext2D){
+      this.bloonArray.forEach(bloon => {
+        bloon.draw(ctx);
+      })
+    }
+
+    debugRenderCurves(ctx: CanvasRenderingContext2D){
+      this.bloonLine.forEach(curve=>{
+        curve.render(ctx)
+      })
+    }
+
+    drawBg(ctx: CanvasRenderingContext2D){
+      ctx.drawImage(this.bg, 0, 0);
     }
 }

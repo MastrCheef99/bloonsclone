@@ -16,14 +16,16 @@ class Bloon {
         this.line = 0;
     }
 
-    move(curve: BezierCurve):boolean{
-        if (this.position + this.speed < curve.getLength()){
-            this.position += this.speed;
+    move(curve: BezierCurve, delta: number):boolean{
+        if (this.position + this.speed*delta < curve.getLength()){
+            this.position += this.speed*delta;
             let point = curve.getPointAtDistance(this.position);
             this.x = point.x;
             this.y = point.y;
             return false;
         } else {
+            this.position = 0;
+            this.line++;
             return true;
         }
     }
@@ -38,12 +40,12 @@ class Bloon {
     draw(ctx:CanvasRenderingContext2D):void{
         ctx.fillStyle = this.color;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 10, 0, 2 * Math.PI);
+        ctx.arc(this.x, this.y, 15, 0, 2 * Math.PI);
         ctx.fill();
 	    ctx.strokeStyle = "black";
-	    ctx.lineWidth = 3;
+	    ctx.lineWidth = 2;
 	    ctx.beginPath();
-	    ctx.arc(this.x, this.y, 10, 0, 2 * Math.PI);
+	    ctx.arc(this.x, this.y, 15, 0, 2 * Math.PI);
 	    ctx.stroke();
     }
 }
