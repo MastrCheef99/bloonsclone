@@ -32,22 +32,30 @@ document.addEventListener('keyup', (e)=>{
 let bezierCurveArray: Array<BezierCurve> = [];
 let tunnelSegments: Array<number> = [];
 let unplaceArr: Array<Array<Point>> = [];
-loadTrack("trackjson/monkeyLane.json", bezierCurveArray, tunnelSegments);
-
 const trackImg = new Image();
-trackImg.src = "img/tracks/monkeyLane.jpg";
-trackImg.addEventListener("error", (e) => {
-    console.error("Error loading image:", e);
-  });
-const track: Track = new Track(bezierCurveArray, [], trackImg, tunnelSegments);
-var maxLen = 1900;
-track.bloonArray.push(new Bloon(10, "blue", 200, []));
-track.bloonArray.push(new Bloon(10, "red", 150, []));
+let track: Track;
+let lastTime: number;
+let currentTime: number;
+let mask: ImageData;
+let towers: Array<Tower> = [];
 
-let lastTime = performance.now();
-let currentTime = performance.now()+1;
+load();
 
-requestAnimationFrame(loop);
+async function load() {
+    trackImg.addEventListener("error", (e) => {
+        console.error("Error loading image:", e);
+    });
+    await loadTrack("trackjson/monkeyLane.json", bezierCurveArray, tunnelSegments);
+    track = new Track(bezierCurveArray, [], trackImg, tunnelSegments);
+    track.bloonArray.push(new Bloon(10, "blue", 200, [], 15));
+    track.bloonArray.push(new Bloon(10, "red", 150, [], 15));
+    lastTime = performance.now();
+    currentTime = performance.now()+1;
+
+    requestAnimationFrame(loop);
+}
+
+
 
 function loop(){
     currentTime = performance.now();
@@ -105,11 +113,13 @@ interface Segment {
 interface TrackData {
     segments: Segment[];
     tunnelSegments: Array<number>;
-    unplaceablePoints: Array<Point>;
+    imgurl: string;
+    maskurl: string;
 }
 
-function loadTrack(url:string, array: Array<BezierCurve>, tunnelArr: Array<number>){
-    const jsonData:TrackData = loadJSONSync<TrackData>("trackjson/monkeyLane.json");
+async function loadTrack(url:string, array: Array<BezierCurve>, tunnelArr: Array<number>){
+    const data = await fetch("trackjson/monkeyLane.json");
+    const jsonData: TrackData = await data.json();
     jsonData.segments.forEach(segment => {
         array.push(new BezierCurve(
             segment.p0,
@@ -121,19 +131,40 @@ function loadTrack(url:string, array: Array<BezierCurve>, tunnelArr: Array<numbe
     jsonData.tunnelSegments.forEach(segment => {
         tunnelArr.push(segment);
     });
+    trackImg.src = jsonData.imgurl;
+    mask = await loadMask(jsonData.maskurl);
 }
 
-function loadJSONSync<T = any>(url: string): T {
-  const xhr = new XMLHttpRequest();
-  xhr.open("GET", url + "?_=" + Date.now(), false); // false = synchronous
-  xhr.setRequestHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-  xhr.setRequestHeader("Pragma", "no-cache");
-  xhr.setRequestHeader("Expires", "0");
-  xhr.send(null);
+async function loadMask(url: string): Promise<ImageData> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, img.width, img.height);
+      resolve(imageData);
+    };
+    img.onerror = reject;
+    img.src = url + "?_=" + Date.now(); // disable cache
+  });
+}
 
-  if (xhr.status !== 200) {
-    throw new Error(`HTTP error ${xhr.status} when loading ${url}`);
-  }
+function isBlocked(x: number, y: number, mask: ImageData): boolean {
+  if (x < 0 || y < 0 || x >= mask.width || y >= mask.height) return true;
+  const index = (Math.floor(y) * mask.width + Math.floor(x)) * 4;
+  const r = mask.data[index];
+  const g = mask.data[index + 1];
+  const b = mask.data[index + 2];
+  const brightness = (r + g + b) / 3;
+  return brightness < 128;
+}
 
-  return JSON.parse(xhr.responseText);
+function pointInCircle(px: number, py: number, cx: number, cy: number, r: number): boolean {
+    const dx = px - cx;
+    const dy = py - cy;
+    return dx * dx + dy * dy <= r * r;
 }

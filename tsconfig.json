@@ -22,6 +22,7 @@
   "files": [
     "js/balloon.ts",
     "js/main.ts",
-    "js/track.ts"
+    "js/track.ts",
+    "js/tower.ts"
   ]
 }

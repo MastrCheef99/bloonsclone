@@ -1,19 +1,21 @@
 class Bloon {
-    health: number;
+    damage: number;
     color: string;
     speed: number;
     immunities: Array<string>;
     position: number;
     x: number;
     y: number;
+    size: number;
     line: number;
-    constructor(health:number, color:string, speed:number, immunities:Array<string>){
-        this.health = health;
+    constructor(damage:number, color:string, speed:number, immunities:Array<string>, size:number, position = 0, line = 0){
+        this.damage = damage;
         this.color = color;
         this.speed = speed;
         this.immunities = immunities;
-        this.position = 0;
-        this.line = 0;
+        this.position = position;
+        this.line = line;
+        this.size = size;
     }
 
     move(curve: BezierCurve, delta: number):boolean{
@@ -30,22 +32,23 @@ class Bloon {
         }
     }
 
-    hit(dmg: number, dmgType:string):boolean{
+    hit(dmg: number, dmgType:string, bloonArray: Array<Bloon>):boolean{
         if (!this.immunities.includes(dmgType)){
-            this.health -= dmg;
+            // bloonArray.push(new Bloon()); TODO: EVENTUALLY MAKE THIS SPAWN THE NEXT LEVEL DOWN
+            return true;
         }
-        return (this.health <= 0);
+        return false;
     }
 
     draw(ctx:CanvasRenderingContext2D):void{
         ctx.fillStyle = this.color;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 15, 0, 2 * Math.PI);
+        ctx.arc(this.x, this.y, this.size, 0, 2 * Math.PI);
         ctx.fill();
 	    ctx.strokeStyle = "black";
 	    ctx.lineWidth = 2;
 	    ctx.beginPath();
-	    ctx.arc(this.x, this.y, 15, 0, 2 * Math.PI);
+	    ctx.arc(this.x, this.y, this.size, 0, 2 * Math.PI);
 	    ctx.stroke();
     }
 }

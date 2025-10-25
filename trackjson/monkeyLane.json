@@ -34,7 +34,6 @@
     "tunnelSegments": [
 
     ],
-    "unplaceablePoints": [
-        
-    ]
+    "imgurl": "img/tracks/monkeyLane.jpg",
+    "maskurl": "img/tracks/monkeyLane.mask.png"
 }
